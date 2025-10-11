@@ -95,16 +95,6 @@ def main():
     perms = generate_permutation_strings("ABCDEF")
     write_input_file(perms, "input_perm720.txt")
 
-    print("\n" + "="*50)
-    print("RECOMENDAÇÕES PARA O RELATÓRIO:")
-    print("="*50)
-    print("• CORRETUDE: Use input_tiny.txt")
-    print("• TESTES RÁPIDOS: Use input_small.txt")
-    print("• TABELAS PRINCIPAIS: Use input_medium.txt e input_large.txt")
-    print("• ESCALABILIDADE FORTE: Use input_large.txt (fixo)")
-    print("• ESCALABILIDADE FRACA: Use todas (varie N e threads juntos)")
-    print("• TEMPO ≥ 10s: input_medium.txt ou maior")
-
 if __name__ == "__main__":
     # Seed para reprodutibilidade
     random.seed(42)

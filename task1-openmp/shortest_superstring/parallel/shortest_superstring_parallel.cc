@@ -359,17 +359,7 @@ write_string_to_standard_ouput (const String& s) -> void
 auto
 main (int argc, char const* argv[]) -> int
 {
-    // Medição de tempo para benchmarking
-    double start_time = omp_get_wtime();
-
     Set <String> ss = read_strings_from_standard_input () ;
-    String result = shortest_superstring (ss) ;
-    write_string_to_standard_ouput (result) ;
-
-    double end_time = omp_get_wtime();
-
-    // Descomentar para ver tempo de execução
-    // std::cerr << "Tempo: " << (end_time - start_time) << " segundos" << std::endl;
-
+    write_string_to_standard_ouput (shortest_superstring (ss)) ;
     return 0 ;
 }
