@@ -1,12 +1,9 @@
-.PHONY = all clean bin
+.PHONY = all clean
 
-all : bin
-
-bin : shsup
+all : shsup
 
 clean:
 	rm -rf shsup
 
-shsup: shortest_superstring.cc
-	$(CXX) -std=c++11 -Wall -O3 shortest_superstring.cc -o shsup
-
+shsup: shortest_superstring_parallel.cc
+	$(CXX) -std=c++11 -Wall -O3 -fopenmp shortest_superstring_parallel.cc -o shsup_par
