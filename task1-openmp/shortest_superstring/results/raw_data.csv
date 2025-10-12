@@ -1,0 +1,16 @@
+input,type,threads,mean_time,std_dev
+input_120_5,sequential,1,0.432600,0.013096
+input_120_5,parallel,1,0.532200,0.008971
+input_120_5,parallel,2,0.379600,0.012758
+input_120_5,parallel,4,0.305050,0.010855
+input_120_5,parallel,6,0.348300,0.014847
+input_24_4,sequential,1,0.006650,0.002681
+input_24_4,parallel,1,0.008050,0.004006
+input_24_4,parallel,2,0.008100,0.004400
+input_24_4,parallel,4,0.008550,0.004751
+input_24_4,parallel,6,0.024250,0.020396
+input_720_6,sequential,1,118.870350,1.562002
+input_720_6,parallel,1,145.078100,1.287202
+input_720_6,parallel,2,101.079750,3.146033
+input_720_6,parallel,4,86.108300,1.115204
+input_720_6,parallel,6,79.629000,0.508298
