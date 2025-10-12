@@ -159,15 +159,22 @@ auto
 highest_overlap_value
         (const Set <Pair <String, String>>& sp) -> Pair <String, String>
 {
-    Pair <String, String> x = first_element (sp) ;
+    if (sp.empty()) {
+        return Pair<String, String>("", "");
+    }
+
+    Pair <String, String> x = first_element(sp);
+    Size max_ov = overlap_value(x.first, x.second);
+
     for (const Pair <String, String>& p : sp) {
-        if ( overlap_value (p.first, p.second)
-                > overlap_value (x.first, x.second) )
+        Size current_ov = overlap_value(p.first, p.second);
+        if (current_ov > max_ov || (current_ov == max_ov && p < x))
         {
-            x = p ;
+            max_ov = current_ov;
+            x = p;
         }
     }
-    return x ;
+    return x;
 }
 
 auto

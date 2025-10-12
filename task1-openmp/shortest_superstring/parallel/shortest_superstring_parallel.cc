@@ -145,30 +145,6 @@ pop_two_elements_and_push_overlap
     return ss ;
 }
 
-/*
- * PARALELIZAÇÃO 1: all_distinct_pairs()
- *
- * ESTRATÉGIA:
- * - Converter set para vector para acesso indexado O(1)
- * - Paralelizar loop externo com #pragma omp parallel for
- * - Cada thread mantém um set local (evita contenção)
- * - Merge final em região crítica
- *
- * VANTAGENS:
- * - Iterações completamente independentes
- * - Boa distribuição de carga (schedule(static))
- * - Minimiza contenção (apenas 1 critical por thread)
- *
- * DESVANTAGENS:
- * - Overhead de conversão set↔vector
- * - Overhead de merge final (N_threads × tamanho_set_local)
- * - Uso extra de memória (sets locais)
- *
- * ALTERNATIVA:
- * - Usar std::vector<Pair> em vez de set (mais eficiente)
- * - Usar #pragma omp critical para cada inserção (muito lento!)
- * - Usar locks ou mutex (mais complexo)
- */
 auto
 all_distinct_pairs (const Set <String>& ss) -> Set <Pair <String, String>>
 {
@@ -177,19 +153,6 @@ all_distinct_pairs (const Set <String>& ss) -> Set <Pair <String, String>>
     Size n = vec.size();
 
     Set <Pair <String, String>> result;
-
-    // Parallelize only if there is enough work
-    if (n < 10) {
-        // Sequential version for small inputs
-        for (Size i = 0; i < n; ++i) {
-            for (Size j = 0; j < n; ++j) {
-                if (i != j) {
-                    result.insert(std::make_pair(vec[i], vec[j]));
-                }
-            }
-        }
-        return result;
-    }
 
     #pragma omp parallel
     {
@@ -255,19 +218,6 @@ highest_overlap_value
     Pair <String, String> best_pair = vec[0];
     Size max_overlap = overlap_value(best_pair.first, best_pair.second);
 
-    // Parallelize only if there is enough work
-    if (n < 20) {
-        // Sequential version for small inputs
-        for (Size i = 1; i < n; ++i) {
-            Size ov = overlap_value(vec[i].first, vec[i].second);
-            if (ov > max_overlap) {
-                max_overlap = ov;
-                best_pair = vec[i];
-            }
-        }
-        return best_pair;
-    }
-
     #pragma omp parallel
     {
         // Each thread maintains its own local maximum
@@ -280,7 +230,7 @@ highest_overlap_value
         #pragma omp for schedule(dynamic, 4)
         for (Size i = 0; i < n; ++i) {
             Size ov = overlap_value(vec[i].first, vec[i].second);
-            if (ov > local_max) {
+            if (ov > local_max || (ov == local_max && vec[i] < local_best)) {
                 local_max = ov;
                 local_best = vec[i];
             }
@@ -290,7 +240,7 @@ highest_overlap_value
         // Only N threads accesses (low contention)
         #pragma omp critical
         {
-            if (local_max > max_overlap) {
+            if (local_max > max_overlap || (local_max == max_overlap && local_best < best_pair)) {
                 max_overlap = local_max;
                 best_pair = local_best;
             }
