@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <iostream>
+#include <chrono>
+#include <iomanip>
 #include <set>
 #include <string>
 #include <utility>
@@ -402,6 +404,9 @@ main (int argc, char const* argv[]) -> int
     MPI_Init(nullptr, nullptr);
     int rank = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    
+    // Start timing the total execution (wall-clock) on all ranks; we'll print on rank 0
+    auto __t_start = std::chrono::high_resolution_clock::now();
 
     Set <String> ss;
     if (rank == 0) {
@@ -412,6 +417,12 @@ main (int argc, char const* argv[]) -> int
 
     if (rank == 0) {
         write_string_to_standard_ouput(result);
+    }
+
+    if (rank == 0) {
+        auto __t_end = std::chrono::high_resolution_clock::now();
+        double __elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(__t_end - __t_start).count();
+        std::cout << std::fixed << std::setprecision(6) << __elapsed << std::endl;
     }
 
     MPI_Finalize();

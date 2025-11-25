@@ -1,3 +1,3 @@
-j3 cpu=4
-j4 cpu=4
+k15 cpu=6
+k21 cpu=6
 

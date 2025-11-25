@@ -422,7 +422,7 @@ main (int argc, char const* argv[]) -> int
     if (rank == 0) {
         auto __t_end = std::chrono::high_resolution_clock::now();
         double __elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(__t_end - __t_start).count();
-        std::cerr << std::fixed << std::setprecision(6) << "Tempo total de execucao: " << __elapsed << " s" << std::endl;
+        std::cout << std::fixed << std::setprecision(6) << "Tempo total de execucao: " << __elapsed << " s" << std::endl;
     }
 
     MPI_Finalize();
