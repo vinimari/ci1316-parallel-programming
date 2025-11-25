@@ -16,11 +16,12 @@ generate() {
 		base64 /dev/urandom | tr -dc 'A-Z' | fold -w "${length}" | head -n "${lines}" > "${out}" || true
 }
 
-echo "Gerando arquivos de entrada (100, 150, 200 linhas; 20 caracteres por linha)..."
+echo "Gerando arquivos de entrada..."
 
 generate 100 20 input_100_20.txt
 generate 150 20 input_150_20.txt
 generate 200 20 input_200_20.txt
+generate 300 20 input_300_20.txt    
 
 echo ""
 echo "Arquivos gerados com sucesso:"
