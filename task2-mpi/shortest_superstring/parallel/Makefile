@@ -1,9 +1,15 @@
-.PHONY = all clean
+# makefile
+MPICXX ?= mpicxx
+CXXFLAGS ?= -std=c++11 -Wall -O3
+TARGET := shsup_par
+SRC := shortest_superstring_parallel.cc
 
-all : shsup_par
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(TARGET): $(SRC)
+	$(MPICXX) $(CXXFLAGS) $(SRC) -o $(TARGET)
 
 clean:
-	rm -rf shsup_par
-
-shsup_par: shortest_superstring_parallel.cc
-	$(CXX) -std=c++11 -Wall -O3 -fopenmp shortest_superstring_parallel.cc -o shsup_par
+	rm -f $(TARGET)

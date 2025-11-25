@@ -1,0 +1,5 @@
+input,type,threads,mean_time,std_dev
+input_120_6,sequential,1,0.513500,0.009594
+input_170_6,parallel,2,1.239250,0.045569
+input_240_6,parallel,4,2.856300,0.056965
+input_294_6,parallel,6,5.317100,0.159234
