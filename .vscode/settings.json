@@ -1,0 +1,12 @@
+{
+  "files.associations": {
+    ".sequelizerc": "javascript",
+    ".stylelintrc": "json",
+    ".prettierrc": "json",
+    "string": "cpp",
+    "set": "cpp",
+    "utility": "cpp",
+    "vector": "cpp",
+    "cstring": "cpp"
+  }
+}
