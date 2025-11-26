@@ -72,6 +72,7 @@ empty (const C& x) -> Boolean
     return x.empty () ;
 }
 
+// Verifica se 'a' é prefixo de 'b'
 Boolean is_prefix (const String& a, const String& b)
 {
     if (size (a) > size (b))
@@ -111,6 +112,7 @@ all_suffixes (const String& x) -> Set <String>
     return ss ;
 }
 
+// Encontra a maior string que é simultaneamente sufixo de 'a' e prefixo de 'b'
 auto
 commom_suffix_and_prefix (const String& a, const String& b) -> String
 {
@@ -131,6 +133,7 @@ overlap_value (const String& s, const String& t) -> SizeType <String>
     return size (commom_suffix_and_prefix (s, t)) ;
 }
 
+// Combina duas strings baseando-se na sobreposição máxima
 auto
 overlap (const String& s, const String& t) -> String
 {
@@ -151,7 +154,7 @@ pop_two_elements_and_push_overlap
 auto
 all_distinct_pairs (const Set <String>& ss) -> Set <Pair <String, String>>
 {
-    // Convert set to vector for fast index access
+    // Converte set para vector para acesso rápido via índice
     std::vector<String> vec(ss.begin(), ss.end());
     Size n = vec.size();
 
@@ -167,36 +170,11 @@ all_distinct_pairs (const Set <String>& ss) -> Set <Pair <String, String>>
     return result;
 }
 
-/*
- * PARALELIZAÇÃO 2: highest_overlap_value()
- *
- * ESTRATÉGIA:
- * - Converter set para vector
- * - Cada thread procura o máximo em sua partição
- * - Usar critical section para atualizar máximo global
- *
- * VANTAGENS:
- * - Paraleliza o cálculo mais custoso (overlap_value)
- * - Apenas leitura dos dados (sem race conditions)
- * - Schedule dynamic: balanceia carga (overlap_value varia muito)
- *
- * DESVANTAGENS:
- * - Critical section serializa atualizações do máximo
- * - Conversão set→vector tem overhead
- *
- * ALTERNATIVA MELHOR:
- * - Usar reduction customizado (mais complexo de implementar)
- * - Usar array de máximos locais + reduce manual
- *
- * IMPLEMENTAÇÃO ATUAL (simplificada):
- * - Máximo local por thread
- * - Critical section para comparar com global
- */
+// Encontra localmente o par com maior sobreposição (versão sequencial/auxiliar)
 auto
 highest_overlap_value
         (const Set <Pair <String, String>>& sp) -> Pair <String, String>
 {
-    // This function is no longer used in MPI version. Keep simple sequential scan
     if (sp.empty()) {
         return Pair<String, String>("", "");
     }
@@ -204,6 +182,8 @@ highest_overlap_value
     Size n = vec.size();
     Pair <String, String> best_pair = vec[0];
     Size max_overlap = overlap_value(best_pair.first, best_pair.second);
+
+    // Varredura linear buscando o máximo
     for (Size i = 1; i < n; ++i) {
         Size ov = overlap_value(vec[i].first, vec[i].second);
         if (ov > max_overlap || (ov == max_overlap && vec[i] < best_pair)) {
@@ -221,7 +201,7 @@ pair_of_strings_with_highest_overlap_value
     return highest_overlap_value (all_distinct_pairs (ss)) ;
 }
 
-// Helper: broadcast a vector<String> from root to all ranks
+// PARALELO: Serializa e faz broadcast (envio em massa) de dados para todos os processos
 inline void
 broadcast_string_vector(std::vector<String>& vec, int root, MPI_Comm comm)
 {
@@ -230,17 +210,20 @@ broadcast_string_vector(std::vector<String>& vec, int root, MPI_Comm comm)
 
     int n = 0;
     if (rank == root) n = int(vec.size());
+    // 1. Transmite número de strings
     MPI_Bcast(&n, 1, MPI_INT, root, comm);
 
     std::vector<int> lengths(n);
     if (rank == root) {
         for (int i = 0; i < n; ++i) lengths[i] = int(vec[i].size());
     }
+    // 2. Transmite array com tamanhos de cada string
     if (n > 0) MPI_Bcast(lengths.data(), n, MPI_INT, root, comm);
 
     int total = 0;
     for (int i = 0; i < n; ++i) total += lengths[i];
 
+    // 3. Serializa conteúdo das strings em um buffer contínuo e transmite
     std::vector<char> buffer(total);
     if (rank == root) {
         int off = 0;
@@ -253,6 +236,7 @@ broadcast_string_vector(std::vector<String>& vec, int root, MPI_Comm comm)
     }
     if (total > 0) MPI_Bcast(buffer.data(), total, MPI_CHAR, root, comm);
 
+    // 4. Reconstrói o vector<String> nos processos destino
     if (rank != root) {
         vec.clear();
         vec.reserve(n);
@@ -264,7 +248,7 @@ broadcast_string_vector(std::vector<String>& vec, int root, MPI_Comm comm)
     }
 }
 
-// MPI-parallel shortest superstring: ranks collaboratively find best pair
+// PARALELO: Função principal que coordena a busca distribuída entre os processos
 auto
 shortest_superstring_mpi(Set <String> t, MPI_Comm comm) -> String
 {
@@ -275,19 +259,21 @@ shortest_superstring_mpi(Set <String> t, MPI_Comm comm) -> String
     std::vector<String> vec(t.begin(), t.end());
     int root = 0;
 
-    // Initial broadcast so all ranks have the vector
+    // Sincroniza estado inicial do vetor com todos
     broadcast_string_vector(vec, root, comm);
 
     while (int(vec.size()) > 1) {
         int n = int(vec.size());
 
-        // Each rank searches a subset of i indices: i = rank; i < n; i += nprocs
+        // PARALELO: Distribuição cíclica (Round-Robin) da carga de trabalho
         int local_i = -1, local_j = -1;
         unsigned long long local_ov = 0ULL;
         for (int i = rank; i < n; i += nprocs) {
             for (int j = 0; j < n; ++j) {
                 if (i == j) continue;
                 unsigned long long ov = overlap_value(vec[i], vec[j]);
+
+                // Mantém o melhor overlap encontrado neste processo
                 if (local_i == -1
                     || ov > local_ov
                     || (ov == local_ov && std::make_pair(vec[i], vec[j]) < std::make_pair(vec[local_i], vec[local_j])))
@@ -299,11 +285,12 @@ shortest_superstring_mpi(Set <String> t, MPI_Comm comm) -> String
             }
         }
 
+        // Fallback se não encontrou nada (apenas para garantir validade)
         if (local_i == -1) {
             local_i = 0; local_j = (n > 1 ? 1 : 0); local_ov = 0ULL;
         }
 
-        // Gather local results at root
+        // PARALELO: Coleta (Gather) os melhores resultados parciais de cada processo no Root
         std::vector<int> all_i, all_j;
         std::vector<unsigned long long> all_ov;
         if (rank == root) {
@@ -319,6 +306,7 @@ shortest_superstring_mpi(Set <String> t, MPI_Comm comm) -> String
         int best_i = 0, best_j = 0;
         unsigned long long best_ov = 0ULL;
 
+        // Root decide qual é o vencedor global e atualiza o vetor (Serial)
         if (rank == root) {
             bool set = false;
             for (int r = 0; r < nprocs; ++r) {
@@ -330,6 +318,7 @@ shortest_superstring_mpi(Set <String> t, MPI_Comm comm) -> String
                 }
             }
 
+            // Realiza o merge e ajusta o vetor
             String merged = overlap(vec[best_i], vec[best_j]);
             if (best_i > best_j) std::swap(best_i, best_j);
             vec.erase(vec.begin() + best_j);
@@ -337,7 +326,7 @@ shortest_superstring_mpi(Set <String> t, MPI_Comm comm) -> String
             vec.push_back(merged);
         }
 
-        // Broadcast updated vector for next iteration
+        // PARALELO: Atualiza todos os processos com o novo vetor para próxima iteração
         broadcast_string_vector(vec, root, comm);
     }
 
@@ -401,11 +390,12 @@ write_string_to_standard_ouput (const String& s) -> void
 auto
 main (int argc, char const* argv[]) -> int
 {
+    // PARALELO: Inicialização do ambiente MPI
     MPI_Init(nullptr, nullptr);
     int rank = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    
-    // Start timing the total execution (wall-clock) on all ranks; we'll print on rank 0
+
+    // Inicia cronômetro (Wall-clock)
     auto __t_start = std::chrono::high_resolution_clock::now();
 
     Set <String> ss;
@@ -425,6 +415,7 @@ main (int argc, char const* argv[]) -> int
         std::cout << std::fixed << std::setprecision(6) << __elapsed << std::endl;
     }
 
+    // PARALELO: Finalização do ambiente MPI
     MPI_Finalize();
     return 0 ;
 }
